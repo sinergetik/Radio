@@ -114,6 +114,9 @@
           <button id="fullscreen-vis-btn" class="w-7 h-7 rounded-md bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-xs text-slate-300 active:scale-95 transition">
             🔲
           </button>
+          <button id="exit-vis-fs-btn" class="hidden w-7 h-7 rounded-md bg-rose-500/80 backdrop-blur-md border border-rose-400 flex items-center justify-center text-xs text-white active:scale-95 transition">
+            ✕
+          </button>
         </div>
 
         <!-- Сводка задержек (Низ) -->
@@ -1547,38 +1550,71 @@
     });
 
     function toggleFS(element) {
+      const isVis = element.id === 'vis-container';
+      const exitBtn = document.getElementById('exit-vis-fs-btn');
+
       if (element.classList.contains('fake-fs')) {
         element.classList.remove('fake-fs');
+        if(isVis && exitBtn) exitBtn.classList.add('hidden');
         setTimeout(resizeCanvas, 60);
         return;
       }
       const fsEl = document.fullscreenElement || document.webkitFullscreenElement;
       if (!fsEl) {
         if (element.requestFullscreen) {
-          element.requestFullscreen().then(() => setTimeout(resizeCanvas, 100)).catch(() => {
+          element.requestFullscreen().then(() => {
+            if(isVis && exitBtn) exitBtn.classList.remove('hidden');
+            setTimeout(resizeCanvas, 100);
+          }).catch(() => {
             element.classList.add('fake-fs');
+            if(isVis && exitBtn) exitBtn.classList.remove('hidden');
             setTimeout(resizeCanvas, 60);
           });
         } else if (element.webkitRequestFullscreen) {
-          try { element.webkitRequestFullscreen(); setTimeout(resizeCanvas, 100); } catch(e) {
+          try { 
+            element.webkitRequestFullscreen(); 
+            if(isVis && exitBtn) exitBtn.classList.remove('hidden');
+            setTimeout(resizeCanvas, 100); 
+          } catch(e) {
             element.classList.add('fake-fs');
+            if(isVis && exitBtn) exitBtn.classList.remove('hidden');
             setTimeout(resizeCanvas, 60);
           }
         } else {
           element.classList.add('fake-fs');
+          if(isVis && exitBtn) exitBtn.classList.remove('hidden');
           setTimeout(resizeCanvas, 60);
         }
       } else {
         if (document.exitFullscreen) {
-          document.exitFullscreen().then(() => setTimeout(resizeCanvas, 100)).catch(() => {});
+          document.exitFullscreen().then(() => {
+            if(isVis && exitBtn) exitBtn.classList.add('hidden');
+            setTimeout(resizeCanvas, 100);
+          }).catch(() => {});
         } else if (document.webkitExitFullscreen) {
           document.webkitExitFullscreen();
+          if(isVis && exitBtn) exitBtn.classList.add('hidden');
           setTimeout(resizeCanvas, 100);
         }
       }
     }
-    document.addEventListener('fullscreenchange', () => setTimeout(resizeCanvas, 100));
-    document.addEventListener('webkitfullscreenchange', () => setTimeout(resizeCanvas, 100));
+
+    document.getElementById('exit-vis-fs-btn')?.addEventListener('click', () => {
+      toggleFS(document.getElementById('vis-container'));
+    });
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement) {
+        document.getElementById('exit-vis-fs-btn')?.classList.add('hidden');
+      }
+      setTimeout(resizeCanvas, 100);
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+      if (!document.webkitIsFullScreen) {
+        document.getElementById('exit-vis-fs-btn')?.classList.add('hidden');
+      }
+      setTimeout(resizeCanvas, 100);
+    });
 
     document.getElementById('fullscreen-app-btn')?.addEventListener('click', () => {
       toggleFS(document.documentElement);
@@ -1727,7 +1763,7 @@
 
       const stationTitle = sel.options[sel.selectedIndex]?.text || 'Онлайн-радио';
       document.getElementById('now-playing-title').textContent = stationTitle;
-      document.getElementById('source-type-badge').textContent = 'БУФЕРИЗАЦИЯ ПОТОКА...';
+      document.getElementById('source-type-badge').textContent = 'ЗАГРУЗКА ЭФИРА...';
       document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
 
       startKeepAliveSession(stationTitle);
@@ -1770,52 +1806,39 @@
           const dot = document.getElementById('live-dot-top');
           if (!ready) {
             dot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-pulse';
-          } else if (bufSec < 1.5) {
-            dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
           } else {
             dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
           }
         } catch (e) {}
       }, 800);
 
-      let reconnectTimeout = null;
-      const scheduleReconnect = () => {
-        if (!isPlaying || activeMode !== 'radio') return;
-        if (reconnectTimeout) return;
-        document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-rose-500 animate-pulse';
-        document.getElementById('source-type-badge').textContent = 'РЕКОННЕКТ...';
-        reconnectTimeout = setTimeout(() => {
-          reconnectTimeout = null;
-          if (!isPlaying || activeMode !== 'radio') return;
+      let loadTimeout = setTimeout(() => {
+        if (radioHtmlAudio && radioHtmlAudio.paused) {
+          // Если за 4 сек аудио не начало играть, сбрасываем CORS и пробуем напрямую
           if (useCors) {
-            // Если сервер блокирует CORS или рвет соединение, пробуем прямой поток
             startNativeRadioStream(url, stationTitle, false);
           } else {
-            startNativeRadioStream(url, stationTitle, false);
+            radioHtmlAudio.load();
+            radioHtmlAudio.play().catch(()=>{});
           }
-        }, 2500);
-      };
+        }
+      }, 4000);
 
       radioHtmlAudio.onplaying = () => {
-        if (reconnectTimeout) { clearTimeout(reconnectTimeout); reconnectTimeout = null; }
+        if (loadTimeout) { clearTimeout(loadTimeout); loadTimeout = null; }
         if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
         document.getElementById('main-play-icon').textContent = '⏸';
-        document.getElementById('source-type-badge').textContent = useCors ? 'РАДИО (DSP АКТИВЕН)' : 'РАДИО (ПРЯМОЙ ПОТОК)';
+        document.getElementById('source-type-badge').textContent = useCors ? 'РАДИО (DSP АКТИВЕН)' : 'РАДИО (ПРЯМОЙ ЭФИР)';
         document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-      };
-
-      radioHtmlAudio.onwaiting = () => {
-        document.getElementById('source-type-badge').textContent = 'БУФЕРИЗАЦИЯ...';
-        document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
       };
 
       radioHtmlAudio.onerror = () => {
         if (!isPlaying || activeMode !== 'radio') return;
         if (useCors) {
-          // Мгновенный переход на поток без CORS, если сервер не отдает заголовки
           startNativeRadioStream(url, stationTitle, false);
         } else {
-          scheduleReconnect();
+          showToast('Обрыв потока. Реконнект...');
+          setTimeout(() => { if (isPlaying && activeMode === 'radio') startRadioWebAudioStream(); }, 3000);
         }
       };
 
@@ -1824,7 +1847,7 @@
         if (useCors) {
           startNativeRadioStream(url, stationTitle, false);
         } else {
-          scheduleReconnect();
+          setTimeout(() => { if (isPlaying && activeMode === 'radio') radioHtmlAudio.play().catch(()=>{}); }, 2000);
         }
       });
     }
