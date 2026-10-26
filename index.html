@@ -1734,7 +1734,7 @@
       startNativeRadioStream(rawUrl, stationTitle, true);
     }
 
-        function startNativeRadioStream(url, stationTitle, useCors = false) {
+            function startNativeRadioStream(url, stationTitle, useCors = false) {
       if (!isPlaying) return;
       if (bufferMonitorTimer) { clearInterval(bufferMonitorTimer); bufferMonitorTimer = null; }
 
@@ -1745,48 +1745,35 @@
       }
 
       radioHtmlAudio = new Audio();
-      radioHtmlAudio.preload = 'auto';
+      radioHtmlAudio.preload = 'none';
       radioHtmlAudio.playsInline = true;
-      // Не используем crossOrigin для потоков со сторонних серверов без CORS хедера, 
-      // чтобы поток гарантированно играл на любых магнитолах и браузерах!
-
-      if (audioCtx && !useCors) {
-        // Подключаем через обычный элемент без CORS в обход блокировки
-        try {
-          if (radioMediaNode) { radioMediaNode.disconnect(); radioMediaNode = null; }
-          // При отсутствии CORS браузер не дает подключать элемент к WebAudio узлам анализатора (SecurityError),
-          // но само радио будет играть идеально! Для визуализатора запустим анимацию по таймеру.
-        } catch (e) {}
-      }
 
       const estKbps = url.includes('320') ? 320 : (url.includes('256') ? 256 : (url.includes('128') ? 128 : 96));
 
+      // Надежный монитор для живого эфира (без вычисления пустого буфера icecast)
       bufferMonitorTimer = setInterval(() => {
         if (!isPlaying || !radioHtmlAudio || activeMode !== 'radio') return;
         try {
-          const ready = radioHtmlAudio.readyState >= 2 && !radioHtmlAudio.paused;
-          const kbpsNow = ready ? estKbps : 0;
-          let bufSec = 0;
-          if (radioHtmlAudio.buffered && radioHtmlAudio.buffered.length > 0) {
-            const end = radioHtmlAudio.buffered.end(radioHtmlAudio.buffered.length - 1);
-            bufSec = Math.max(0, end - radioHtmlAudio.currentTime);
-          }
-          const mb = ((bufSec * estKbps) / 8 / 1024).toFixed(2);
-          document.getElementById('buffer-info').textContent = `${kbpsNow} kb/s | ${mb} MB`;
+          const isReallyPlaying = !radioHtmlAudio.paused && radioHtmlAudio.readyState >= 2;
+          const kbpsNow = isReallyPlaying ? estKbps : 0;
+          // Показываем стабильный номинал битрейта потока, чтобы не висел 0
+          document.getElementById('buffer-info').textContent = `${kbpsNow} kb/s | LIVE`;
 
           const dot = document.getElementById('live-dot-top');
-          if (!ready) {
-            dot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-pulse';
+          if (!isReallyPlaying) {
+            dot.className = 'w-2 h-2 rounded-full bg-amber-400 animate-pulse';
           } else {
             dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
           }
         } catch (e) {}
-      }, 800);
+      }, 1000);
 
       radioHtmlAudio.onplaying = () => {
+        if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
         document.getElementById('main-play-icon').textContent = '⏸';
         document.getElementById('source-type-badge').textContent = 'РАДИО ЭФИР (ОНЛАЙН)';
         document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+        document.getElementById('buffer-info').textContent = `${estKbps} kb/s | LIVE`;
       };
 
       radioHtmlAudio.onwaiting = () => {
@@ -1796,15 +1783,18 @@
 
       radioHtmlAudio.onerror = () => {
         if (!isPlaying || activeMode !== 'radio') return;
-        showToast('Обрыв потока. Реконнект...');
+        showToast('Попытка переподключения к эфиру...');
         setTimeout(() => {
           if (isPlaying && activeMode === 'radio') startRadioWebAudioStream();
         }, 3000);
       };
 
       radioHtmlAudio.src = url;
-      radioHtmlAudio.play().catch(() => {
-        showToast('Нажмите Play еще раз для запуска эфира');
+      radioHtmlAudio.play().then(() => {
+        isPlaying = true;
+      }).catch((err) => {
+        console.warn("Autoplay blocked or stream error:", err);
+        showToast('Нажмите Play для запуска радио');
       });
     }
 
@@ -2079,8 +2069,13 @@
       haptic('sel');
     });
 
-    function renderVisualizerLoop() {
+    let lastRenderTime = 0;
+    function renderVisualizerLoop(timestamp) {
       requestAnimationFrame(renderVisualizerLoop);
+
+      // Ограничиваем до ~30 FPS в фоновом режиме или режиме паузы для снижения нагрузки на процессор (устраняет нагрев)
+      if (!isPlaying && timestamp - lastRenderTime < 60) return; 
+      lastRenderTime = timestamp;
 
       // Обновляем таймер локального трека
       if (isPlaying && activeMode === 'file' && fileAudioBuffer && audioCtx) {
