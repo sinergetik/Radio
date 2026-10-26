@@ -23,6 +23,7 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       user-select: none;
       overflow-x: hidden;
+      transition: filter 0.3s ease;
     }
     .mono { font-family: 'JetBrains Mono', monospace; }
     .glass-card {
@@ -62,65 +63,47 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between pb-6">
 
-  <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
-  <div class="max-w-md w-full mx-auto px-4 pt-3 space-y-3">
-    <div class="glass-card rounded-2xl p-3.5 flex items-center justify-between shadow-lg">
-      <div class="flex items-center gap-2.5">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center shadow-md">
-          <span class="text-base">🎚️</span>
-        </div>
-        <div>
-          <div class="flex items-center gap-1.5">
-            <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <h1 class="text-sm font-extrabold tracking-tight" id="user-greeting">TMA Audio Studio</h1>
-          </div>
-          <p class="text-[11px]" style="color: var(--hint-color);" id="engine-subtitle">DSP-процессор активен</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-1.5">
-        <button id="pocket-mode-btn" title="Карманный режим (не гасить экран)" class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 active:scale-95 transition">
-          🌙 Карман
-        </button>
-        <button id="bypass-btn" class="px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 active:scale-95 transition">
-          DSP: ВКЛ
-        </button>
-        <button id="download-html-btn" title="Скачать index.html" class="p-2 rounded-xl bg-white/10 hover:bg-white/15 active:scale-95 transition border border-white/10">
-          <svg class="w-4 h-4 text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
-
-    <!-- ГЛАВНЫЙ ЭКРАН ВИЗУАЛИЗАТОРА И ПЛЕЕРА -->
+  <!-- ГЛАВНЫЙ ЭКРАН ВИЗУАЛИЗАТОРА И ПЛЕЕРА -->
     <div class="glass-card rounded-3xl p-4 shadow-2xl relative overflow-hidden">
       <!-- Индикатор текущих активных эффектов -->
       <div class="flex items-center justify-between mb-2">
-        <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400" id="source-type-badge">ГОТОВ К ЗАПУСКУ</span>
-          <h2 class="text-base font-bold truncate max-w-[230px]" id="now-playing-title">Выберите радио или файл</h2>
+        <div class="min-w-0 pr-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1" id="source-type-badge">
+            ГОТОВ К ЗАПУСКУ
+          </span>
+          <h2 class="text-base font-bold truncate max-w-[210px]" id="now-playing-title">Выберите радио или файл</h2>
         </div>
-        <button id="vis-mode-btn" class="px-2.5 py-1 rounded-lg bg-white/10 text-[10px] mono text-slate-300 border border-white/10 active:scale-95">
-          📊 Спектр
-        </button>
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button id="fullscreen-app-btn" class="w-8 h-8 rounded-lg bg-white/10 text-sm flex items-center justify-center border border-white/10 active:scale-95 transition">
+            ⛶
+          </button>
+          <button id="vis-mode-btn" class="px-2.5 py-1.5 rounded-lg bg-white/10 text-[10px] mono text-slate-300 border border-white/10 active:scale-95 transition">
+            📊 Спектр
+          </button>
+          <button id="settings-btn" class="w-8 h-8 rounded-lg bg-white/10 text-sm flex items-center justify-center border border-white/10 active:scale-95 transition">
+            ⚙️
+          </button>
+        </div>
       </div>
 
       <!-- Прыгающий Canvas Визуализатор -->
-      <div class="relative w-full h-44 rounded-2xl bg-slate-950/90 border border-white/10 overflow-hidden shadow-inner flex items-center justify-center">
+      <div id="vis-container" class="relative w-full h-44 rounded-2xl bg-slate-950/90 border border-white/10 overflow-hidden shadow-inner flex items-center justify-center">
         <canvas id="visualizer-canvas" class="w-full h-full block" width="650" height="348"></canvas>
 
-        <!-- Сводка задержек поверх визуализатора -->
-        <div class="absolute top-2.5 left-2.5 right-2.5 flex justify-between items-center pointer-events-none">
-          <span class="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] mono text-sky-300 border border-sky-400/20" id="hud-delay-l">
-            L: 1.43 мс
-          </span>
-          <span class="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] mono text-emerald-300 border border-emerald-400/20" id="hud-width">
-            Стерео: 100%
-          </span>
-          <span class="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] mono text-indigo-300 border border-indigo-400/20" id="hud-delay-r">
-            R: 0.00 мс
-          </span>
+        <!-- Буфер и статус (Верх) -->
+        <div class="absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-black/60 backdrop-blur-md border border-white/10 pointer-events-none">
+           <span id="live-dot-top" class="w-2 h-2 rounded-full bg-slate-500"></span>
+           <span id="buffer-info" class="text-[9px] mono text-slate-300 font-bold">0 kb/s | 0.00 MB</span>
+        </div>
+        <button id="fullscreen-vis-btn" class="absolute top-2 right-2 w-7 h-7 rounded-md bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-xs text-slate-300 active:scale-95 transition">
+          🔲
+        </button>
+
+        <!-- Сводка задержек (Низ) -->
+        <div class="absolute bottom-2 left-2.5 right-2.5 flex justify-between items-center pointer-events-none">
+          <span class="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] mono text-sky-300 border border-sky-400/20" id="hud-delay-l">L: 1.43 мс</span>
+          <span class="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] mono text-emerald-300 border border-emerald-400/20" id="hud-width">100%</span>
+          <span class="px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-[10px] mono text-indigo-300 border border-indigo-400/20" id="hud-delay-r">R: 0.00 мс</span>
         </div>
       </div>
 
@@ -134,14 +117,18 @@
       </div>
 
       <!-- Кнопки управления плеером -->
-      <div class="mt-4 flex items-center justify-between gap-2.5">
-        <button id="main-play-btn" class="flex-1 py-3.5 px-4 rounded-2xl font-extrabold text-sm bg-gradient-to-r from-sky-400 to-indigo-500 text-slate-950 shadow-lg shadow-sky-500/25 active:scale-95 transition flex items-center justify-center gap-2">
-          <span id="main-play-icon">▶</span>
-          <span id="main-play-text">Запустить эфир</span>
+      <div class="mt-4 flex items-center justify-between gap-2">
+        <button id="main-prev-btn" class="flex-1 h-11 rounded-xl font-bold text-xl bg-white/5 border border-white/10 text-slate-300 active:scale-95 transition flex items-center justify-center shrink-0">
+          ⏮
         </button>
-
-        <button id="main-stop-btn" class="py-3.5 px-4 rounded-2xl font-bold text-xs bg-rose-500/20 border border-rose-400/30 text-rose-300 active:scale-95 transition">
-          ⏹ Стоп
+        <button id="main-play-btn" class="flex-1 h-11 rounded-xl font-bold text-xl bg-gradient-to-r from-sky-400 to-indigo-500 text-slate-950 shadow-lg shadow-sky-500/25 active:scale-95 transition flex items-center justify-center shrink-0">
+          <span id="main-play-icon">▶</span>
+        </button>
+        <button id="main-next-btn" class="flex-1 h-11 rounded-xl font-bold text-xl bg-white/5 border border-white/10 text-slate-300 active:scale-95 transition flex items-center justify-center shrink-0">
+          ⏭
+        </button>
+        <button id="main-stop-btn" class="flex-1 h-11 rounded-xl font-bold text-xl bg-rose-500/20 border border-rose-400/30 text-rose-300 active:scale-95 transition flex items-center justify-center shrink-0">
+          ⏹
         </button>
       </div>
 
@@ -151,56 +138,86 @@
         <input type="range" id="master-gain-slider" min="0" max="1.5" step="0.01" value="1">
         <span class="text-[11px] mono w-10 text-right text-sky-300" id="master-gain-label">100%</span>
       </div>
-    </div>
 
-    <!-- ВЫБОР ИСТОЧНИКА: РАДИО / СВОЙ ФАЙЛ / ГЕНЕРАТОРЫ -->
-    <div class="glass-card rounded-3xl p-4 shadow-xl space-y-3">
-      <div class="flex items-center justify-between">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">📻 Источник и Фоновый режим</h3>
-        <button id="bg-mode-toggle" class="text-[10px] px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 mono font-bold active:scale-95 transition">
-          🔒 Фон и экран блока: ВКЛ
-        </button>
+      <!-- ВЫБОР ИСТОЧНИКА: РАДИО / СВОЙ ФАЙЛ / ГЕНЕРАТОРЫ -->
+      <div class="mt-4 space-y-3 pt-4 border-t border-white/10">
+
+      <!-- Станции Радио и Качество -->
+      <div class="flex items-center gap-2">
+        <select id="radio-select" class="w-[62%] p-3 rounded-xl bg-slate-900/90 border border-white/10 text-[11px] font-bold text-white focus:outline-none truncate">
+          <option value="https://radiorecord.hostingradio.ru/rr_main96.aacp">🔥 Record - Основной</option>
+          <option value="https://radiorecord.hostingradio.ru/deep96.aacp">🌊 Record Deep</option>
+          <option value="https://radiorecord.hostingradio.ru/wave96.aacp">📻 Radio Wave</option>
+          <option value="https://radiorecord.hostingradio.ru/tm96.aacp">⚡ Trancemission</option>
+          <option value="https://radiorecord.hostingradio.ru/chill96.aacp">🌙 Record Chill-Out</option>
+          <option value="https://radiorecord.hostingradio.ru/synth96.aacp">🌆 Record Synthwave</option>
+          <option value="https://ep256.hostingradio.ru:8052/europaplus256.mp3">🌍 Европа Плюс</option>
+          <option value="https://retro.hostingradio.ru:8043/retro256.mp3">📼 Ретро FM</option>
+          <option value="https://ice1.somafm.com/groovesalad-128-mp3">🥗 Groove Salad</option>
+          <option value="custom">🔗 Свой URL...</option>
+        </select>
+        <select id="stream-quality" class="w-[38%] p-3 rounded-xl bg-slate-800/80 border border-sky-400/20 text-[11px] font-bold text-sky-300 focus:outline-none truncate">
+          <option value="low">📶 96 kbps</option>
+          <option value="high">🎧 320 kbps</option>
+        </select>
       </div>
-
-      <!-- Станции Радио -->
-      <select id="radio-select" class="w-full p-3 rounded-xl bg-slate-900/90 border border-white/10 text-xs font-semibold text-white focus:outline-none">
-        <option value="https://radiorecord.hostingradio.ru/rr_main96.aacp">🔥 Radio Record — Основной эфир</option>
-        <option value="https://radiorecord.hostingradio.ru/deep96.aacp">🌊 Record Deep</option>
-        <option value="https://radiorecord.hostingradio.ru/wave96.aacp">📻 Radio Wave (Record)</option>
-        <option value="https://radiorecord.hostingradio.ru/tm96.aacp">⚡ Record Trancemission</option>
-        <option value="https://radiorecord.hostingradio.ru/chill96.aacp">🌙 Record Chill-Out</option>
-        <option value="https://radiorecord.hostingradio.ru/synth96.aacp">🌆 Record Synthwave</option>
-        <option value="https://ep256.hostingradio.ru:8052/europaplus256.mp3">🌍 Европа Плюс</option>
-        <option value="https://retro.hostingradio.ru:8043/retro256.mp3">📼 Ретро FM</option>
-        <option value="https://ice1.somafm.com/groovesalad-128-mp3">🥗 SomaFM — Groove Salad</option>
-        <option value="custom">🔗 Вставить свой URL потока...</option>
-      </select>
-
-      <!-- Выбор качества потока -->
-      <select id="stream-quality" class="w-full mt-2 p-2.5 rounded-xl bg-slate-800/80 border border-sky-400/20 text-xs font-bold text-sky-300 focus:outline-none">
-        <option value="low">📶 Экономия трафика (AAC 96 kbps)</option>
-        <option value="high">🎧 Высокое качество (MP3 320 kbps)</option>
-      </select>
 
       <input type="url" id="custom-url-input" placeholder="https://..." class="hidden w-full mt-2 p-2.5 rounded-xl bg-slate-900 border border-sky-400/40 text-xs mono text-sky-300 focus:outline-none">
 
-      <!-- Кнопка выбора локального файла -->
-      <div class="pt-1">
-        <label class="w-full py-3 px-4 rounded-xl font-bold text-xs bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-center cursor-pointer active:scale-95 transition flex items-center justify-center gap-2 relative">
-          <span>📂 Загрузить свой MP3 / FLAC / WAV / M4A</span>
-          <input type="file" id="file-input" accept="audio/*,.mp3,.flac,.wav,.m4a,.aac,.ogg" class="absolute inset-0 opacity-0 cursor-pointer">
+      <!-- Кнопки Плей-лист и Load -->
+      <div class="flex items-center gap-2 mt-1">
+        <button id="toggle-playlist-btn" class="w-[62%] py-2.5 rounded-xl font-bold text-xs bg-white/10 border border-white/10 text-slate-300 active:scale-95 transition truncate">
+          🎶 Плей-лист
+        </button>
+        <label class="w-[38%] py-2.5 rounded-xl font-bold text-xs bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-center cursor-pointer active:scale-95 transition relative overflow-hidden truncate">
+          <span>📥 Load</span>
+          <input type="file" id="file-input" accept="audio/*,.mp3,.flac,.wav,.m4a,.aac,.ogg" multiple class="absolute inset-0 opacity-0 cursor-pointer">
         </label>
       </div>
-    </div>
+      <div id="playlist-container" class="hidden mt-2 bg-slate-900/50 rounded-xl p-2 max-h-32 overflow-y-auto custom-scroll space-y-1"></div>
 
-    <!-- КНОПКА ОТКРЫТИЯ ВСПЛЫВАЮЩЕЙ ВКЛАДКИ ЭФФЕКТОВ -->
-    <button id="open-dsp-drawer-btn" class="w-full py-4 px-5 rounded-2xl font-extrabold text-sm bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-xl shadow-purple-500/25 active:scale-98 transition flex items-center justify-between">
-      <span class="flex items-center gap-2">
-        <span class="text-lg">🎛️</span>
-        <span>Открыть пульт DSP и Задержек</span>
-      </span>
-      <span class="px-2.5 py-1 rounded-lg bg-black/30 text-xs mono">12 эффектов ▲</span>
-    </button>
+      <!-- КНОПКА ОТКРЫТИЯ ВСПЛЫВАЮЩЕЙ ВКЛАДКИ ЭФФЕКТОВ -->
+      <button id="open-dsp-drawer-btn" class="w-full mt-4 py-3.5 px-5 rounded-xl font-extrabold text-sm bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white shadow-xl shadow-purple-500/25 active:scale-98 transition flex items-center justify-between">
+        <span class="flex items-center gap-2">
+          <span class="text-lg">🎛️</span>
+          <span>Настроить DSP-Процессор</span>
+        </span>
+        <span class="px-2.5 py-1 rounded-lg bg-black/30 text-xs mono">12 эффектов ▲</span>
+      </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ОКНО НАСТРОЕК (SETTINGS) -->
+  <div id="settings-modal" class="fixed inset-0 z-[60] pointer-events-none">
+    <div id="settings-backdrop" class="drawer-backdrop absolute inset-0 bg-black/70 backdrop-blur-sm opacity-0"></div>
+    <div id="settings-panel" class="drawer-panel absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900 border-t border-white/15 rounded-t-3xl shadow-2xl translate-y-full flex flex-col p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <h2 class="text-base font-extrabold flex items-center gap-2">⚙️ Настройки</h2>
+        <button id="close-settings-btn" class="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-sm font-bold active:scale-95">✕</button>
+      </div>
+      
+      <div class="space-y-3">
+        <button id="pocket-mode-btn" class="w-full py-3 rounded-xl text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30 active:scale-95 transition">
+          🌙 Карманный режим (Не гасить экран)
+        </button>
+        <button id="bg-mode-toggle" class="w-full py-3 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 active:scale-95 transition">
+          🔒 Фоновый режим: ВКЛ
+        </button>
+        <button id="bypass-btn" class="w-full py-3 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 active:scale-95 transition">
+          DSP: ВКЛ (Отключить обработку)
+        </button>
+        <button id="download-html-btn" class="w-full py-3 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/15 active:scale-95 transition border border-white/10">
+          ⬇️ Скачать index.html (Резервная копия)
+        </button>
+      </div>
+
+      <div class="pt-2">
+        <label class="text-xs font-bold text-slate-300 block mb-3">🎨 Цвет интерфейса (Тон)</label>
+        <input type="range" id="theme-hue-slider" min="0" max="360" step="1" value="0">
+      </div>
+    </div>
   </div>
 
   <!-- ВСПЛЫВАЮЩЕЕ ОКНО (DRAWER) С НАСТРОЙКАМИ ЗАДЕРЖЕК И ЭФФЕКТОВ -->
@@ -212,14 +229,14 @@
     <div id="drawer-panel" class="drawer-panel absolute bottom-0 left-0 right-0 max-w-md mx-auto bg-slate-900 border-t border-white/15 rounded-t-3xl shadow-2xl translate-y-full max-h-[88vh] flex flex-col">
       
       <!-- Шапка шторки -->
-      <div class="p-4 border-b border-white/10 flex items-center justify-between shrink-0">
-        <div>
-          <h2 class="text-base font-extrabold flex items-center gap-2">
+      <div class="p-4 border-b border-white/10 flex items-center justify-between shrink-0 gap-2">
+        <div class="min-w-0 flex-1">
+          <h2 class="text-base font-extrabold flex items-center gap-2 truncate">
             <span>🎛️ Студийная стойка DSP</span>
           </h2>
-          <p class="text-[11px] text-slate-400">Все изменения применяются в реальном времени</p>
+          <p class="text-[10px] text-slate-400 truncate">Все изменения применяются в реальном времени</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 shrink-0">
           <button id="reset-all-dsp-btn" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30 active:scale-95">
             Сброс
           </button>
@@ -230,15 +247,18 @@
       </div>
 
       <!-- Переключатель вкладок внутри шторки -->
-      <div class="px-4 pt-2.5 flex gap-1.5 shrink-0">
-        <button data-tab="tab-delay" class="dsp-tab-btn flex-1 py-2 rounded-xl text-xs font-bold bg-sky-500 text-slate-950">
-          ⏱️ Задержка и Сцена
+      <div class="px-4 pt-2.5 grid grid-cols-2 sm:grid-cols-4 gap-1.5 shrink-0">
+        <button data-tab="tab-delay" class="dsp-tab-btn py-2 rounded-xl text-xs font-bold bg-sky-500 text-slate-950">
+          ⏱️ Задержка
         </button>
-        <button data-tab="tab-space" class="dsp-tab-btn flex-1 py-2 rounded-xl text-xs font-bold bg-white/10 text-slate-300">
-          🌌 Эхо, Реверб, 3D
+        <button data-tab="tab-eq" class="dsp-tab-btn py-2 rounded-xl text-xs font-bold bg-white/10 text-slate-300">
+          🎚️ 16-EQ
         </button>
-        <button data-tab="tab-eq" class="dsp-tab-btn flex-1 py-2 rounded-xl text-xs font-bold bg-white/10 text-slate-300">
-          🎚️ 16-Полос EQ
+        <button data-tab="tab-space" class="dsp-tab-btn py-2 rounded-xl text-xs font-bold bg-white/10 text-slate-300">
+          🌌 Эхо/3D
+        </button>
+        <button data-tab="tab-mic" class="dsp-tab-btn py-2 rounded-xl text-xs font-bold bg-white/10 text-rose-300">
+          🎤 Микро-Тест
         </button>
       </div>
 
@@ -328,6 +348,31 @@
           </div>
         </div>
 
+        
+        <!-- ВКЛАДКА 4: АВТО-МИКРОФОН (ЗАДЕРЖКИ) -->
+        <div id="tab-mic" class="dsp-tab-content hidden space-y-3.5">
+          <div class="bg-slate-800/80 p-3.5 rounded-2xl border border-white/10 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-rose-300">🎤 Авто-настройка задержек (L/R)</span>
+            </div>
+            <p class="text-[10px] text-slate-400">
+              Положите телефон на место головы водителя (микрофоном вверх). Программа подаст громкие щелчки в каналы и измерит задержку.<br><br>
+              <b class="text-amber-400">ВНИМАНИЕ (ДЛЯ АВТО):</b> При доступе к микрофону Bluetooth принудительно переходит в режим "Телефонный звонок" (HFP). Этот профиль монофонический по своей природе. Чтобы тест стерео-сцены сработал, телефон должен быть подключен к магнитоле через <b>AUX, USB, CarPlay или Android Auto</b>.
+            </p>
+            <div class="bg-slate-900 p-3 rounded-xl border border-white/5 space-y-2 text-center">
+              <div id="mic-status" class="text-xs font-bold text-slate-300">Ожидание...</div>
+              <div class="flex justify-between text-[10px] mono text-slate-500">
+                <span id="mic-res-l">L: --</span>
+                <span id="mic-res-r">R: --</span>
+                <span id="mic-res-diff">Δ: --</span>
+              </div>
+            </div>
+            <button id="start-mic-align-btn" class="w-full py-2.5 rounded-xl text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 active:scale-95 transition">
+              Начать акустический замер
+            </button>
+          </div>
+        </div>
+
         <!-- ВКЛАДКА 2: ЭХО, РЕВЕРБЕРАТОР, 3D ВРАЩЕНИЕ -->
         <div id="tab-space" class="dsp-tab-content hidden space-y-3.5">
           
@@ -386,11 +431,16 @@
             <div class="flex items-center justify-between">
               <div>
                 <span class="text-xs font-bold text-amber-300 block">🎚️ 16-полосный графический эквалайзер</span>
-                <span class="text-[10px] text-slate-400">Диапазон от -15 дБ до +15 дБ (25 Гц — 16 кГц)</span>
+                <span class="text-[10px] text-slate-400">Диапазон от -15 дБ до +15 дБ</span>
               </div>
-              <button id="eq-flat-btn" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-400/30 active:scale-95">
-                В ноль (0 дБ)
-              </button>
+              <div class="flex gap-1.5 flex-col items-end sm:flex-row sm:items-center">
+                <button id="auto-eq-btn" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30 active:scale-95 transition whitespace-nowrap">
+                  🤖 Авто-АЧХ
+                </button>
+                <button id="eq-flat-btn" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-400/30 active:scale-95 transition whitespace-nowrap">
+                  В ноль (0 дБ)
+                </button>
+              </div>
             </div>
 
             <!-- Быстрые пресеты 16-полосного эквалайзера -->
@@ -498,7 +548,8 @@
     let dryBypassGain = null;    // Прямой обход (Bypass)
     let wetMasterGain = null;    // Выход после всех эффектов
     let masterGain = null;       // Финальная громкость
-    let analyser = null;         // Анализатор спектра для Canvas
+    let analyser = null;
+    let eqAnalyser = null; // Высокоточный анализатор для Авто-АЧХ         // Анализатор спектра для Canvas
 
     // Узлы эффектов
     let lpfNode = null, driveNode = null;
@@ -609,6 +660,12 @@
         navigator.mediaSession.setActionHandler('stop', () => {
           stopEverything();
         });
+        navigator.mediaSession.setActionHandler('previoustrack', () => {
+          playPrevStation();
+        });
+        navigator.mediaSession.setActionHandler('nexttrack', () => {
+          playNextStation();
+        });
       } catch (e) {}
     }
 
@@ -662,6 +719,12 @@
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
       analyser.smoothingTimeConstant = 0.80;
+
+      if (!eqAnalyser) {
+        eqAnalyser = audioCtx.createAnalyser();
+        eqAnalyser.fftSize = 8192; // Высокое разрешение для низких частот (25 Гц)
+        eqAnalyser.smoothingTimeConstant = 0.2;
+      }
 
       // 1. Создаем 16-полосный каскадный эквалайзер
       eqBands = EQ_16_FREQS.map((freq, idx) => {
@@ -738,6 +801,7 @@
 
       // СБОРКА ЦЕПИ DSP:
       // Режим Bypass (прямой сигнал в обход обработки)
+      inputBus.connect(eqAnalyser); // Параллельный отвод сырого звука для анализатора
       inputBus.connect(dryBypassGain);
       dryBypassGain.gain.value = 0;
       dryBypassGain.connect(masterGain);
@@ -920,6 +984,7 @@
       driveNode.curve = makeDistortionCurve(driveVal);
 
       masterGain.gain.setTargetAtTime(vol, now, 0.02);
+      saveSettings();
     }
 
     // Привязываем все ползунки
@@ -954,6 +1019,269 @@
       syncAllDspParams();
       haptic('sel');
     }
+
+    
+    // === АЛГОРИТМ АВТОМАТИЧЕСКОГО ВЫРАВНИВАНИЯ АЧХ (AUTO-EQ) ===
+    document.getElementById('auto-eq-btn').addEventListener('click', (e) => {
+      const btn = e.target;
+      if (btn.disabled) return;
+      if (!isPlaying || !audioCtx || !eqAnalyser) {
+        showToast('Сначала включите музыку (Радио или Файл)!');
+        haptic('light');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Анализ 2 сек...';
+      btn.classList.replace('bg-emerald-500/20', 'bg-rose-500/20');
+      btn.classList.replace('text-emerald-300', 'text-rose-300');
+      btn.classList.replace('border-emerald-400/30', 'border-rose-400/30');
+      haptic('light');
+
+      const nyquist = audioCtx.sampleRate / 2;
+      const binCount = eqAnalyser.frequencyBinCount;
+      const dataArray = new Float32Array(binCount);
+      
+      const maxSnapshots = 20; // 20 раз по 100 мс = 2 секунды
+      let snapshots = 0;
+      const bandAverages = new Float32Array(16);
+
+      const interval = setInterval(() => {
+        eqAnalyser.getFloatFrequencyData(dataArray);
+        
+        for (let i = 0; i < 16; i++) {
+          const freq = EQ_16_FREQS[i];
+          // Берем спектральное окно вокруг каждой ISO частоты (± 20%)
+          const lowFreq = freq * 0.8;
+          const highFreq = freq * 1.2;
+          const lowBin = Math.max(0, Math.floor((lowFreq / nyquist) * binCount));
+          const highBin = Math.min(binCount - 1, Math.ceil((highFreq / nyquist) * binCount));
+          
+          let sum = 0;
+          let count = 0;
+          for (let b = lowBin; b <= highBin; b++) {
+            const db = dataArray[b];
+            // Игнорируем полную тишину (шумовой пол ниже -120 дБ)
+            if (db > -120) {
+              // Переводим дБ в линейную амплитуду для правильного усреднения энергии
+              sum += Math.pow(10, db / 20);
+              count++;
+            }
+          }
+          const avgAmp = count > 0 ? (sum / count) : 0.0001;
+          bandAverages[i] += avgAmp;
+        }
+        
+        snapshots++;
+        
+        // Когда собрали достаточно данных
+        if (snapshots >= maxSnapshots) {
+          clearInterval(interval);
+          
+          let totalAmp = 0;
+          for (let i = 0; i < 16; i++) {
+            bandAverages[i] /= maxSnapshots;
+            totalAmp += bandAverages[i];
+          }
+          
+          // Средняя энергия всего трека (базовая линия)
+          const avgTrackAmp = totalAmp / 16;
+          const baseTargetDb = 20 * Math.log10(avgTrackAmp);
+          
+          const newEqValues = [];
+          for (let i = 0; i < 16; i++) {
+            const freq = EQ_16_FREQS[i];
+            const currentDb = 20 * Math.log10(bandAverages[i]);
+            
+            // Целевая кривая: Не чисто плоская (белый шум), а с уклоном розового шума
+            // Человеческое ухо воспринимает как "ровную" кривую с небольшим спадом на ВЧ.
+            // Делаем спад ~1.2 дБ на октаву относительно 1 кГц
+            const octavesFrom1k = Math.log2(freq / 1000);
+            const pinkTargetDb = baseTargetDb - (1.2 * octavesFrom1k);
+            
+            // Разница между "идеалом" и тем, что играет сейчас
+            let diffDb = (pinkTargetDb - currentDb) * 0.75; // 0.75 - степень коррекции (оставляем немного характера)
+            
+            // Ограничения от -15 до +15 дБ
+            diffDb = Math.max(-15, Math.min(15, diffDb));
+            
+            // Если звук очень тихий и энергии нет (например на 20кГц), не задираем эквалайзер в потолок
+            if (bandAverages[i] <= 0.0002) diffDb = 0; 
+            
+            // Округляем до 0.5 дБ для ползунков
+            diffDb = Math.round(diffDb * 2) / 2;
+            newEqValues.push(diffDb);
+          }
+          
+          // Применяем как пресет
+          applyEqPreset(newEqValues);
+          
+          // Возвращаем кнопку в исходное состояние
+          btn.disabled = false;
+          btn.textContent = '🤖 Авто-АЧХ';
+          btn.classList.replace('bg-rose-500/20', 'bg-emerald-500/20');
+          btn.classList.replace('text-rose-300', 'text-emerald-300');
+          btn.classList.replace('border-rose-400/30', 'border-emerald-400/30');
+          showToast('АЧХ трека выровнена!');
+          haptic('ok');
+        }
+      }, 100);
+    });
+
+    
+    // === АВТОМАТИЧЕСКАЯ КАЛИБРОВКА ЗАДЕРЖЕК ЧЕРЕЗ МИКРОФОН ===
+    document.getElementById('start-mic-align-btn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const statusEl = document.getElementById('mic-status');
+      if (btn.disabled) return;
+      
+      stopEverything(); // Выключаем музыку
+      initAudioEngine();
+      
+      try {
+        statusEl.textContent = 'Запрашиваем микрофон...';
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+        
+        if (audioCtx.state !== 'running') await audioCtx.resume();
+        
+        btn.disabled = true;
+        btn.classList.replace('bg-rose-500/20', 'bg-slate-700');
+        
+        // Сохраняем в window чтобы сборщик мусора (GC) не убил процессор
+        window._micStream = stream;
+        window._micSource = audioCtx.createMediaStreamSource(stream);
+        window._micProcessor = audioCtx.createScriptProcessor(4096, 1, 1);
+        
+        window._micSource.connect(window._micProcessor);
+        window._micProcessor.connect(audioCtx.destination);
+        
+        let phase = 0; // 0: ждем L, 1: ждем R, 2: готово
+        let peakL = 0, peakR = 0;
+        
+        let recordBuffer = [];
+        let isRecording = false;
+        let samplesRecorded = 0;
+        const targetSamples = Math.floor(audioCtx.sampleRate * 0.25); // 250 мс записи
+        
+        const fireClick = (pan) => {
+          const now = audioCtx.currentTime;
+          const clickTime = now + 0.1; 
+          
+          const osc = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          
+          // ИСПОЛЬЗУЕМ ЖЕСТКИЙ РОУТИНГ (ChannelMerger), а не программный паннер
+          const merger = audioCtx.createChannelMerger(2);
+          
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(4000, clickTime); 
+          osc.frequency.exponentialRampToValueAtTime(100, clickTime + 0.05);
+          
+          g.gain.setValueAtTime(1, clickTime);
+          g.gain.exponentialRampToValueAtTime(0.001, clickTime + 0.05);
+          
+          osc.connect(g);
+          
+          // Жестко направляем моно-сигнал генератора в физический Левый (0) или Правый (1) канал
+          if (pan === -1) {
+            g.connect(merger, 0, 0); // В левый
+          } else {
+            g.connect(merger, 0, 1); // В правый
+          }
+          
+          merger.connect(audioCtx.destination);
+          
+          osc.start(clickTime);
+          osc.stop(clickTime + 0.1);
+          
+          setTimeout(() => {
+            recordBuffer = [];
+            samplesRecorded = 0;
+            isRecording = true;
+          }, 100); 
+        };
+        
+        const analyzeBuffer = () => {
+          let maxVal = 0;
+          let maxIdx = 0;
+          // Ищем самый громкий всплеск (начало импульса)
+          for(let i = 0; i < recordBuffer.length; i++) {
+            if (Math.abs(recordBuffer[i]) > maxVal) {
+              maxVal = Math.abs(recordBuffer[i]);
+              maxIdx = i;
+            }
+          }
+          const latencyMs = (maxIdx / audioCtx.sampleRate) * 1000;
+          return latencyMs;
+        };
+        
+        window._micProcessor.onaudioprocess = (evt) => {
+          if (!isRecording) return;
+          const input = evt.inputBuffer.getChannelData(0);
+          
+          for(let i = 0; i < input.length; i++) {
+            if (samplesRecorded < targetSamples) {
+              recordBuffer.push(input[i]);
+              samplesRecorded++;
+            }
+          }
+          
+          if (samplesRecorded >= targetSamples) {
+            isRecording = false;
+            const latency = analyzeBuffer();
+            
+            if (phase === 0) {
+              peakL = latency;
+              phase = 1;
+              document.getElementById('mic-res-l').textContent = `L: ${peakL.toFixed(1)} мс`;
+              statusEl.textContent = 'Замер правого канала (Не шумите!)...';
+              setTimeout(() => { fireClick(1); }, 1000); // через секунду щелкаем правым
+            } else if (phase === 1) {
+              peakR = latency;
+              phase = 2;
+              document.getElementById('mic-res-r').textContent = `R: ${peakR.toFixed(1)} мс`;
+              
+              // Завершение и очистка
+              window._micProcessor.disconnect();
+              window._micSource.disconnect();
+              stream.getTracks().forEach(t => t.stop());
+              
+              let diff = peakL - peakR; 
+              document.getElementById('mic-res-diff').textContent = `Δ: ${diff.toFixed(2)} мс`;
+              
+              if (diff > 0) {
+                document.getElementById('fx-delay-l').value = 0;
+                document.getElementById('fx-delay-r').value = diff.toFixed(2);
+              } else {
+                document.getElementById('fx-delay-r').value = 0;
+                document.getElementById('fx-delay-l').value = (-diff).toFixed(2);
+              }
+              
+              syncAllDspParams();
+              statusEl.textContent = 'Успех! Сцена по центру.';
+              btn.disabled = false;
+              btn.classList.replace('bg-slate-700', 'bg-rose-500/20');
+              haptic('ok');
+              
+              // Принудительно убиваем аудиоконтекст с микрофоном, чтобы ОС вышла из режима звонка
+              setTimeout(() => { 
+                stopEverything(); 
+                showToast('Завершено. Можно включать музыку.'); 
+                statusEl.textContent = 'Ожидание...';
+              }, 1500);
+            }
+          }
+        };
+        
+        statusEl.textContent = 'Внимание! Замер левого канала...';
+        setTimeout(() => { fireClick(-1); }, 800); // 800мс на подготовку
+        
+      } catch (err) {
+        statusEl.textContent = 'Ошибка: Микрофон недоступен';
+        btn.disabled = false;
+        btn.classList.replace('bg-slate-700', 'bg-rose-500/20');
+      }
+    });
 
     document.getElementById('eq-flat-btn').addEventListener('click', () => {
       applyEqPreset(EQ_PRESETS.flat);
@@ -1022,25 +1350,142 @@
       showToast('Синхронизировано с сабвуфером!');
     });
 
+
+    // === АВТОСОХРАНЕНИЕ НАСТРОЕК (LOCALSTORAGE) ===
+    let savedCustomUrls = [];
+
+    function saveSettings() {
+      const settings = {
+        hue: document.getElementById('theme-hue-slider').value,
+        bypass: isBypassed,
+        eq: EQ_16_FREQS.map((_, i) => document.getElementById(`fx-eq-band-${i}`)?.value || 0),
+        delayL: document.getElementById('fx-delay-l').value,
+        delayR: document.getElementById('fx-delay-r').value,
+        width: document.getElementById('fx-stereo-width').value,
+        pan: document.getElementById('fx-pan').value,
+        reverbMix: document.getElementById('fx-reverb-mix').value,
+        reverbDecay: document.getElementById('fx-reverb-decay').value,
+        echoMix: document.getElementById('fx-echo-mix').value,
+        echoTime: document.getElementById('fx-echo-time').value,
+        echoFb: document.getElementById('fx-echo-fb').value,
+        autopan: document.getElementById('fx-autopan').value,
+        drive: document.getElementById('fx-drive').value,
+        lpf: document.getElementById('fx-lpf').value,
+        gain: document.getElementById('master-gain-slider').value,
+        distL: document.getElementById('dist-l').value,
+        distR: document.getElementById('dist-r').value,
+        distSub: document.getElementById('dist-sub').value,
+        customUrls: savedCustomUrls
+      };
+      localStorage.setItem('tma_dsp_settings', JSON.stringify(settings));
+    }
+
+    function loadSettings() {
+      try {
+        const saved = localStorage.getItem('tma_dsp_settings');
+        if (!saved) return;
+        const s = JSON.parse(saved);
+
+        if (s.hue !== undefined) {
+          document.getElementById('theme-hue-slider').value = s.hue;
+          document.body.style.filter = `hue-rotate(${s.hue}deg)`;
+        }
+        
+        if (s.eq && s.eq.length === 16) {
+          s.eq.forEach((val, i) => {
+             const el = document.getElementById(`fx-eq-band-${i}`);
+             if (el) el.value = val;
+          });
+        }
+        
+        const mapVal = (id, val) => { if(val !== undefined && document.getElementById(id)) document.getElementById(id).value = val; };
+        mapVal('fx-delay-l', s.delayL);
+        mapVal('fx-delay-r', s.delayR);
+        mapVal('fx-stereo-width', s.width);
+        mapVal('fx-pan', s.pan);
+        mapVal('fx-reverb-mix', s.reverbMix);
+        mapVal('fx-reverb-decay', s.reverbDecay);
+        mapVal('fx-echo-mix', s.echoMix);
+        mapVal('fx-echo-time', s.echoTime);
+        mapVal('fx-echo-fb', s.echoFb);
+        mapVal('fx-autopan', s.autopan);
+        mapVal('fx-drive', s.drive);
+        mapVal('fx-lpf', s.lpf);
+        mapVal('master-gain-slider', s.gain);
+        mapVal('dist-l', s.distL);
+        mapVal('dist-r', s.distR);
+        mapVal('dist-sub', s.distSub);
+        
+        isBypassed = !!s.bypass;
+        updateBypassUI();
+
+        if (s.customUrls && Array.isArray(s.customUrls)) {
+          savedCustomUrls = s.customUrls;
+          const select = document.getElementById('radio-select');
+          savedCustomUrls.forEach(url => {
+             const opt = document.createElement('option');
+             opt.value = url;
+             opt.textContent = '⭐ ' + url;
+             select.insertBefore(opt, select.querySelector('option[value="custom"]'));
+          });
+        }
+      } catch (e) {}
+    }
+
+    function updateBypassUI() {
+      const btn = document.getElementById('bypass-btn');
+      if (isBypassed) {
+        if (dryBypassGain && audioCtx) {
+           const now = audioCtx.currentTime;
+           dryBypassGain.gain.setTargetAtTime(1, now, 0.02);
+           wetMasterGain.gain.setTargetAtTime(0, now, 0.02);
+        }
+        btn.textContent = 'DSP: ВЫКЛ';
+        btn.className = 'w-full py-3 rounded-xl text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-400/30 active:scale-95 transition';
+      } else {
+        if (dryBypassGain && audioCtx) {
+           const now = audioCtx.currentTime;
+           dryBypassGain.gain.setTargetAtTime(0, now, 0.02);
+           wetMasterGain.gain.setTargetAtTime(1, now, 0.02);
+        }
+        btn.textContent = 'DSP: ВКЛ (Отключить обработку)';
+        btn.className = 'w-full py-3 rounded-xl text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 active:scale-95 transition';
+      }
+    }
+
+    // Settings Modal Handlers
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsBackdrop = document.getElementById('settings-backdrop');
+    const settingsPanel = document.getElementById('settings-panel');
+    
+    function openSettings() {
+      settingsModal.classList.remove('pointer-events-none');
+      settingsBackdrop.classList.remove('opacity-0');
+      settingsPanel.classList.remove('translate-y-full');
+      haptic('light');
+    }
+    function closeSettings() {
+      settingsBackdrop.classList.add('opacity-0');
+      settingsPanel.classList.add('translate-y-full');
+      setTimeout(() => settingsModal.classList.add('pointer-events-none'), 320);
+      haptic('light');
+    }
+    document.getElementById('settings-btn').addEventListener('click', openSettings);
+    document.getElementById('close-settings-btn').addEventListener('click', closeSettings);
+    settingsBackdrop.addEventListener('click', closeSettings);
+
+    document.getElementById('theme-hue-slider').addEventListener('input', (e) => {
+      document.body.style.filter = `hue-rotate(${e.target.value}deg)`;
+      saveSettings();
+    });
+
     // Bypass (Вкл / Выкл DSP)
     document.getElementById('bypass-btn').addEventListener('click', () => {
       initAudioEngine();
       isBypassed = !isBypassed;
-      const btn = document.getElementById('bypass-btn');
-      const now = audioCtx.currentTime;
-      if (isBypassed) {
-        dryBypassGain.gain.setTargetAtTime(1, now, 0.02);
-        wetMasterGain.gain.setTargetAtTime(0, now, 0.02);
-        btn.textContent = 'DSP: ВЫКЛ';
-        btn.className = 'px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-rose-500/20 text-rose-300 border border-rose-400/30';
-        showToast('Прямой звук (без обработки)');
-      } else {
-        dryBypassGain.gain.setTargetAtTime(0, now, 0.02);
-        wetMasterGain.gain.setTargetAtTime(1, now, 0.02);
-        btn.textContent = 'DSP: ВКЛ';
-        btn.className = 'px-2.5 py-1.5 rounded-xl text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30';
-        showToast('DSP процессор включен');
-      }
+      updateBypassUI();
+      saveSettings();
+      showToast(isBypassed ? 'Прямой звук (без обработки)' : 'DSP процессор включен');
       haptic('light');
     });
 
@@ -1067,6 +1512,31 @@
     // =========================================================================
     // 4. ИСТОЧНИКИ ЗВУКА: ЧАНКОВЫЙ СТРИМИНГ РАДИО (ДЛЯ iOS), ФАЙЛЫ И СИНТЕЗАТОР
     // =========================================================================
+
+    document.getElementById('toggle-playlist-btn')?.addEventListener('click', () => {
+      document.getElementById('playlist-container').classList.toggle('hidden');
+      haptic('light');
+    });
+
+    document.getElementById('fullscreen-app-btn')?.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(()=>{});
+      } else {
+        document.exitFullscreen().catch(()=>{});
+      }
+      haptic('light');
+    });
+
+    document.getElementById('fullscreen-vis-btn')?.addEventListener('click', () => {
+      const visCont = document.getElementById('vis-container');
+      if (!document.fullscreenElement) {
+        visCont.requestFullscreen().catch(()=>{});
+      } else {
+        document.exitFullscreen().catch(()=>{});
+      }
+      haptic('light');
+    });
+
     function startKeepAliveSession(title) {
       requestWakeLock();
       keepAliveAudio.play().catch(() => {});
@@ -1084,6 +1554,8 @@
         radioHtmlAudio.pause();
         radioHtmlAudio.removeAttribute('src');
         radioHtmlAudio.load();
+        radioHtmlAudio = null;
+        radioMediaNode = null;
       }
       if (fileBufferSource) {
         try { fileBufferSource.stop(); } catch (e) {}
@@ -1096,6 +1568,19 @@
         const clickBtn = document.getElementById('test-click-btn');
         if (clickBtn) clickBtn.textContent = '🥁 Тест-щелчки';
       }
+      if (window._micStream) {
+        window._micStream.getTracks().forEach(t => t.stop());
+        window._micStream = null;
+      }
+
+      // Полный сброс аудио-контекста:
+      // 1. Мгновенно убивает звук (без задержки остатков буфера)
+      // 2. Освобождает ОС от "Режима звонка/Микрофона" возвращая Bluetooth в стерео-музыку
+      if (audioCtx) {
+        audioCtx.close().catch(() => {});
+        audioCtx = null;
+        eqAnalyser = null;
+      }
 
       keepAliveAudio.pause();
       if ('mediaSession' in navigator) {
@@ -1103,14 +1588,19 @@
       }
 
       document.getElementById('main-play-icon').textContent = '▶';
-      document.getElementById('main-play-text').textContent = 'Запустить эфир';
-    }
+      }
 
     // ПОТОКОВОЕ РАДИО С БОЛЬШИМ ПРЕДБУФЕРОМ И ФОНОВОЙ ПОДДЕРЖКОЙ ЭКРАНА БЛОКИРОВКИ
     async function startRadioWebAudioStream() {
       initAudioEngine();
-      stopEverything();
+      
+      // Не вызываем stopEverything(), чтобы не мигала кнопка, просто очищаем предыдущее
+      if (radioAbortCtrl) { radioAbortCtrl.abort(); radioAbortCtrl = null; }
+      if (radioHtmlAudio) { radioHtmlAudio.pause(); radioHtmlAudio.src=''; radioHtmlAudio=null; radioMediaNode=null; }
+      if (fileBufferSource) { try { fileBufferSource.stop(); } catch(e){} fileBufferSource.disconnect(); fileBufferSource=null; }
+      
       activeMode = 'radio';
+      isPlaying = true;
       document.getElementById('seek-container').classList.add('hidden');
 
       const sel = document.getElementById('radio-select');
@@ -1118,23 +1608,20 @@
         ? document.getElementById('custom-url-input').value.trim()
         : sel.value;
 
-      // Применяем выбор качества (подменяем URL для известных серверов)
       const quality = document.getElementById('stream-quality').value;
       if (quality === 'high') {
-        rawUrl = rawUrl.replace('96.aacp', '320.mp3'); // Для серверов Record
-        rawUrl = rawUrl.replace('128-mp3', '256-mp3'); // Для SomaFM
+        rawUrl = rawUrl.replace('96.aacp', '320.mp3');
+        rawUrl = rawUrl.replace('128-mp3', '256-mp3');
       }
 
       const stationTitle = sel.options[sel.selectedIndex]?.text || 'Онлайн-радио';
       document.getElementById('now-playing-title').textContent = stationTitle;
       document.getElementById('source-type-badge').textContent = 'ПОТОК РАДИО В DSP...';
-      document.getElementById('main-play-text').textContent = 'Подключение...';
-
       radioAbortCtrl = new AbortController();
-      isPlaying = true;
       startKeepAliveSession(stationTitle);
+      
+      let hasPlayedChunks = false;
 
-      // Читаем поток и планируем буферы с запасом вперед, чтобы при блокировке экрана звук не прерывался
       try {
         const response = await fetch(rawUrl, { signal: radioAbortCtrl.signal });
         if (!response.body) throw new Error('No ReadableStream');
@@ -1146,24 +1633,39 @@
 
         document.getElementById('source-type-badge').textContent = 'РАДИО (DSP + ФОН АКТИВЕН)';
         document.getElementById('main-play-icon').textContent = '🔊';
-        document.getElementById('main-play-text').textContent = 'В эфире (DSP активен)';
-        showToast('Радио играет! Для кармана нажмите «🌙 Карман»');
-
+        let lastTime = performance.now();
+        let bytesSinceLast = 0;
+        
         while (isPlaying) {
           const { value, done } = await reader.read();
-          if (done || !isPlaying) break;
+          if (done) {
+             if (isPlaying) throw new Error('Stream End');
+             break;
+          }
+          if (!isPlaying) break;
 
           const combined = new Uint8Array(byteAccumulator.length + value.length);
           combined.set(byteAccumulator, 0);
           combined.set(value, byteAccumulator.length);
           byteAccumulator = combined;
+          
+          bytesSinceLast += value.length;
+          let nowTime = performance.now();
+          if (nowTime - lastTime > 1000) {
+              let kbps = Math.round((bytesSinceLast * 8) / 1024);
+              let mb = (byteAccumulator.length / (1024 * 1024)).toFixed(2);
+              document.getElementById('buffer-info').textContent = `${kbps} kb/s | ${mb} MB`;
+              document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+              bytesSinceLast = 0;
+              lastTime = nowTime;
+          }
 
-          // Первый чанк декодируем быстро (48 КБ), а следующие крупными блоками (96 КБ ~ 8 сек),
-          // чтобы создать большой запас в очереди WebAudio на случай блокировки экрана
-          const targetSize = isFirstChunk ? 48000 : 96000;
+          // УВЕЛИЧЕННЫЕ БУФЕРЫ ДЛЯ ИСКЛЮЧЕНИЯ ХРИПОВ НА МОБИЛЬНОМ ИНТЕРНЕТЕ
+          const targetSize = isFirstChunk ? 256000 : 128000;
 
           if (byteAccumulator.length >= targetSize) {
             isFirstChunk = false;
+            hasPlayedChunks = true;
             const sliceToDecode = byteAccumulator.buffer.slice(0);
             byteAccumulator = new Uint8Array(0);
 
@@ -1176,51 +1678,136 @@
               src.connect(inputBus);
 
               const now = audioCtx.currentTime;
-              if (nextPlayTime < now) nextPlayTime = now + 0.08;
+              if (nextPlayTime < now) nextPlayTime = now + 0.15;
               src.start(nextPlayTime);
               nextPlayTime += decodedBuf.duration;
             }).catch(() => {});
           }
         }
       } catch (err) {
-        if (err.name === 'AbortError') return;
-        startFallbackRadioElement(rawUrl, stationTitle);
+        if (err.name === 'AbortError' || !isPlaying) return;
+        
+        if (hasPlayedChunks) {
+          showToast('Обрыв связи. Реконнект...');
+          document.getElementById('source-type-badge').textContent = 'ПЕРЕПОДКЛЮЧЕНИЕ...';
+          setTimeout(() => { if (isPlaying) startRadioWebAudioStream(); }, 3000);
+        } else {
+          startFallbackRadioElement(rawUrl, stationTitle);
+        }
       }
     }
 
     function startFallbackRadioElement(url, stationTitle = 'Онлайн-радио') {
-      if (!radioHtmlAudio) {
-        radioHtmlAudio = new Audio();
-        radioHtmlAudio.crossOrigin = 'anonymous';
-        radioHtmlAudio.playsInline = true;
-        radioMediaNode = audioCtx.createMediaElementSource(radioHtmlAudio);
-        radioMediaNode.connect(inputBus);
+      if (radioHtmlAudio) {
+        radioHtmlAudio.pause();
+        radioHtmlAudio.removeAttribute('src');
+        radioHtmlAudio = null;
       }
+      
+      radioHtmlAudio = new Audio();
+      radioHtmlAudio.crossOrigin = 'anonymous'; // Попытка 1: с поддержкой DSP (CORS)
+      radioHtmlAudio.playsInline = true;
+      
+      if (audioCtx) {
+          try {
+              if (radioMediaNode) radioMediaNode.disconnect();
+              radioMediaNode = audioCtx.createMediaElementSource(radioHtmlAudio);
+              radioMediaNode.connect(inputBus);
+          } catch(e) {}
+      }
+
+      const handleFallbackError = () => {
+         if (!isPlaying) return;
+         if (radioHtmlAudio && radioHtmlAudio.hasAttribute('crossorigin')) {
+             // Провал из-за CORS! 
+             // Браузер глушит звук, если он подключен к DSP. Создаем чистый плеер В ОБХОД DSP.
+             radioHtmlAudio.pause();
+             radioHtmlAudio.removeAttribute('src');
+             
+             radioHtmlAudio = new Audio(); // Чистый элемент без crossOrigin
+             radioHtmlAudio.playsInline = true;
+             
+             radioHtmlAudio.onerror = () => {
+                 if (isPlaying) {
+                     showToast('Обрыв потока. Реконнект...');
+                     setTimeout(() => { if (isPlaying) { radioHtmlAudio.load(); radioHtmlAudio.play().catch(()=>{}); } }, 3000);
+                 }
+             };
+             
+             radioHtmlAudio.src = url;
+             radioHtmlAudio.play().then(() => {
+                 showToast('DSP отключен (защита сервера), но Радио работает!');
+                 document.getElementById('source-type-badge').textContent = 'РАДИО (БЕЗ DSP)'; document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-rose-400 animate-pulse';
+                 document.getElementById('main-play-icon').textContent = '🔊';
+                 }).catch(()=>{
+                 if (isPlaying) {
+                     showToast('Обрыв потока. Реконнект...');
+                     setTimeout(() => { if (isPlaying) startFallbackRadioElement(url, stationTitle); }, 3000);
+                 }
+             });
+         } else {
+             // Провал даже без CORS (пропал интернет или битая ссылка)
+             showToast('Обрыв потока. Реконнект...');
+             setTimeout(() => { if (isPlaying) startFallbackRadioElement(url, stationTitle); }, 3000);
+         }
+      };
+
+      radioHtmlAudio.onerror = handleFallbackError;
+
       radioHtmlAudio.src = url;
       radioHtmlAudio.play().then(() => {
         isPlaying = true;
         startKeepAliveSession(stationTitle);
-        document.getElementById('source-type-badge').textContent = 'РАДИО ЭФИР (ФОНЫ АКТИВНЫ)';
+        document.getElementById('source-type-badge').textContent = 'РАДИО ЭФИР (ФОНЫ АКТИВНЫ)'; document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-orange-400 animate-pulse';
         document.getElementById('main-play-icon').textContent = '🔊';
-        document.getElementById('main-play-text').textContent = 'В эфире';
-      }).catch(() => {
-        showToast('Не удалось подключиться к потоку');
+        }).catch((e) => {
+        if (isPlaying) handleFallbackError();
       });
     }
 
-    // ЗАГРУЗКА И ПРОИГРЫВАНИЕ СВОЕГО ФАЙЛА (MP3 / FLAC / WAV)
-    document.getElementById('file-input').addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+    // ПЛЕЙЛИСТ И ЛОКАЛЬНЫЕ ФАЙЛЫ
+    let playlistFiles = [];
+    let currentTrackIndex = 0;
 
-      initAudioEngine();
+    document.getElementById('file-input').addEventListener('change', async (e) => {
+      const files = e.target.files;
+      if (!files || files.length === 0) return;
+      playlistFiles = Array.from(files);
+      currentTrackIndex = 0;
+      renderPlaylist();
+      playLocalTrack(currentTrackIndex);
+    });
+
+    window.playLocalTrackFromUI = function(idx) {
+        playLocalTrack(idx);
+    };
+
+    function renderPlaylist() {
+      const pc = document.getElementById('playlist-container');
+      if (playlistFiles.length > 1) {
+        pc.classList.remove('hidden');
+        pc.innerHTML = playlistFiles.map((f, i) => 
+          `<div class="p-2 rounded-lg text-xs cursor-pointer truncate ${i === currentTrackIndex ? 'bg-sky-500/20 text-sky-300 font-bold' : 'text-slate-400 hover:bg-white/5'}" onclick="playLocalTrackFromUI(${i})">${i+1}. ${f.name}</div>`
+        ).join('');
+      } else {
+        pc.classList.add('hidden');
+      }
+    }
+
+    async function playLocalTrack(index) {
+      if(index < 0 || index >= playlistFiles.length) return;
+      currentTrackIndex = index;
+      renderPlaylist();
+      const file = playlistFiles[index];
+
       stopEverything();
+      initAudioEngine();
       activeMode = 'file';
+      isPlaying = true;
 
       document.getElementById('now-playing-title').textContent = file.name;
-      document.getElementById('source-type-badge').textContent = 'ДЕКОДИРОВАНИЕ ФАЙЛА...';
-      showToast('Загрузка в память DSP...');
-
+      document.getElementById('source-type-badge').innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block mr-1"></span> ДЕКОДИРОВАНИЕ...';
+      
       try {
         const buf = await file.arrayBuffer();
         fileAudioBuffer = await audioCtx.decodeAudioData(buf);
@@ -1230,14 +1817,15 @@
         startDecodedFile(0);
         haptic('ok');
       } catch (err) {
-        showToast('Формат файла не поддерживается');
+        showToast('Формат не поддерживается');
+        setTimeout(() => switchStation('next'), 1500); // Автоскип битого файла
       }
-    });
+    }
 
     function startDecodedFile(offset = 0) {
       if (!fileAudioBuffer) return;
-      initAudioEngine();
       stopEverything();
+      initAudioEngine();
       activeMode = 'file';
       isPlaying = true;
 
@@ -1250,11 +1838,24 @@
 
       fileStartTime = audioCtx.currentTime - offset;
       fileBufferSource.start(0, offset);
+      fileBufferSource.onended = () => {
+         if (isPlaying && activeMode === 'file') {
+             // Проверяем, действительно ли трек доиграл до конца
+             if (Math.abs((audioCtx.currentTime - fileStartTime) - fileAudioBuffer.duration) < 0.5) {
+                 if (playlistFiles.length > 1) {
+                     switchStation('next');
+                 } else {
+                     stopEverything();
+                 }
+             }
+         }
+      };
+      
+      document.getElementById('source-type-badge').innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block mr-1"></span> ЛОКАЛЬНЫЙ ТРЕК (DSP)';
 
-      document.getElementById('source-type-badge').textContent = 'ЛОКАЛЬНЫЙ ТРЕК (DSP + ФОН)';
+      
       document.getElementById('main-play-icon').textContent = '⏸';
-      document.getElementById('main-play-text').textContent = 'Играет трек';
-    }
+      }
 
     document.getElementById('seek-slider').addEventListener('input', (e) => {
       if (!fileAudioBuffer) return;
@@ -1277,7 +1878,6 @@
 
     // ТЕСТОВЫЕ ЩЕЛЧКИ (ВНУТРИ ВКЛАДКИ ЗАДЕРЖЕК ДЛЯ ПРОВЕРКИ ФАЗЫ И СЦЕНЫ)
     document.getElementById('test-click-btn').addEventListener('click', (e) => {
-      initAudioEngine();
       if (clickTimer) {
         stopEverything();
         document.getElementById('source-type-badge').textContent = 'ОСТАНОВЛЕНО';
@@ -1286,6 +1886,7 @@
         return;
       }
       stopEverything();
+      initAudioEngine();
       activeMode = 'click';
       isPlaying = true;
       e.currentTarget.textContent = '⏹ Стоп щелчки';
@@ -1313,6 +1914,36 @@
     });
 
     // ГЛАВНЫЕ КНОПКИ ПЛЕЕРА
+    
+    function switchStation(direction) {
+      if (activeMode === 'radio') {
+          const sel = document.getElementById('radio-select');
+          let idx = sel.selectedIndex;
+          if (direction === 'next') idx = (idx + 1) % sel.options.length;
+          else idx = (idx - 1 + sel.options.length) % sel.options.length;
+          sel.selectedIndex = idx;
+          sel.dispatchEvent(new Event('change'));
+          document.getElementById('main-play-btn').click();
+      } else if (activeMode === 'file' && playlistFiles.length > 0) {
+          let idx = currentTrackIndex;
+          if (direction === 'next') idx = (idx + 1) % playlistFiles.length;
+          else idx = (idx - 1 + playlistFiles.length) % playlistFiles.length;
+          playLocalTrack(idx);
+      }
+    }
+
+    function playNextStation() { switchStation('next'); }
+    function playPrevStation() { switchStation('prev'); }
+
+    document.getElementById('main-next-btn').addEventListener('click', () => {
+      playNextStation();
+      haptic('light');
+    });
+    document.getElementById('main-prev-btn').addEventListener('click', () => {
+      playPrevStation();
+      haptic('light');
+    });
+
     document.getElementById('main-play-btn').addEventListener('click', () => {
       initAudioEngine();
       if (activeMode === 'file' && fileAudioBuffer) {
@@ -1323,6 +1954,19 @@
           startDecodedFile(filePauseOffset);
         }
       } else {
+        const sel = document.getElementById('radio-select');
+        const customUrlInp = document.getElementById('custom-url-input').value.trim();
+        if (sel.value === 'custom' && customUrlInp) {
+          if (!savedCustomUrls.includes(customUrlInp)) {
+             savedCustomUrls.push(customUrlInp);
+             const opt = document.createElement('option');
+             opt.value = customUrlInp;
+             opt.textContent = '⭐ ' + customUrlInp;
+             sel.insertBefore(opt, sel.querySelector('option[value="custom"]'));
+             sel.value = customUrlInp;
+             saveSettings();
+          }
+        }
         startRadioWebAudioStream();
       }
       haptic('medium');
@@ -1584,6 +2228,8 @@
       URL.revokeObjectURL(url);
       showToast('Файл index.html сохранен!');
     });
+    loadSettings();
+    setTimeout(() => { try { syncAllDspParams(); } catch(e){} }, 500);
   </script>
 </body>
 </html>
