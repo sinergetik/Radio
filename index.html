@@ -72,6 +72,9 @@
 </head>
 <body class="min-h-screen flex flex-col justify-between pb-6">
 
+  <!-- Обертка -->
+  <div class="max-w-md w-full mx-auto px-4 pt-3 space-y-3">
+
   <!-- ГЛАВНЫЙ ЭКРАН ВИЗУАЛИЗАТОРА И ПЛЕЕРА -->
     <div class="glass-card rounded-3xl p-4 shadow-2xl relative overflow-hidden">
       <!-- Индикатор текущих активных эффектов -->
@@ -529,7 +532,7 @@
       tg.expand();
       const u = tg.initDataUnsafe?.user;
       if (u?.first_name) {
-        document.getElementById('user-greeting').textContent = `${u.first_name} • DSP Studio`;
+        const ug = document.getElementById('user-greeting'); if(ug) ug.textContent = `${u.first_name} • DSP Studio`;
       }
     }
 
