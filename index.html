@@ -1734,7 +1734,7 @@
       startNativeRadioStream(rawUrl, stationTitle, true);
     }
 
-            function startNativeRadioStream(url, stationTitle, useCors = false) {
+                function startNativeRadioStream(url, stationTitle) {
       if (!isPlaying) return;
       if (bufferMonitorTimer) { clearInterval(bufferMonitorTimer); bufferMonitorTimer = null; }
 
@@ -1744,19 +1744,30 @@
         radioHtmlAudio = null;
       }
 
+      initAudioEngine();
+
       radioHtmlAudio = new Audio();
-      radioHtmlAudio.preload = 'none';
+      radioHtmlAudio.preload = 'auto';
       radioHtmlAudio.playsInline = true;
+      radioHtmlAudio.crossOrigin = 'anonymous';
+
+      if (audioCtx) {
+        try {
+          if (radioMediaNode) { radioMediaNode.disconnect(); radioMediaNode = null; }
+          radioMediaNode = audioCtx.createMediaElementSource(radioHtmlAudio);
+          radioMediaNode.connect(inputBus);
+        } catch (e) {
+          console.warn("CORS restricted WebAudio passthrough for stream, playing direct:", e);
+        }
+      }
 
       const estKbps = url.includes('320') ? 320 : (url.includes('256') ? 256 : (url.includes('128') ? 128 : 96));
 
-      // Надежный монитор для живого эфира (без вычисления пустого буфера icecast)
       bufferMonitorTimer = setInterval(() => {
         if (!isPlaying || !radioHtmlAudio || activeMode !== 'radio') return;
         try {
           const isReallyPlaying = !radioHtmlAudio.paused && radioHtmlAudio.readyState >= 2;
           const kbpsNow = isReallyPlaying ? estKbps : 0;
-          // Показываем стабильный номинал битрейта потока, чтобы не висел 0
           document.getElementById('buffer-info').textContent = `${kbpsNow} kb/s | LIVE`;
 
           const dot = document.getElementById('live-dot-top');
@@ -1771,7 +1782,7 @@
       radioHtmlAudio.onplaying = () => {
         if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
         document.getElementById('main-play-icon').textContent = '⏸';
-        document.getElementById('source-type-badge').textContent = 'РАДИО ЭФИР (ОНЛАЙН)';
+        document.getElementById('source-type-badge').textContent = 'РАДИО ЭФИР (DSP + ВИЗУАЛ)';
         document.getElementById('live-dot-top').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
         document.getElementById('buffer-info').textContent = `${estKbps} kb/s | LIVE`;
       };
@@ -1793,7 +1804,7 @@
       radioHtmlAudio.play().then(() => {
         isPlaying = true;
       }).catch((err) => {
-        console.warn("Autoplay blocked or stream error:", err);
+        console.warn("Autoplay blocked:", err);
         showToast('Нажмите Play для запуска радио');
       });
     }
