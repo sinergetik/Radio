@@ -2117,6 +2117,20 @@
       if (analyser && isPlaying) {
         analyser.getByteFrequencyData(freqData);
         analyser.getByteTimeDomainData(timeData);
+        
+        // Если играет радио, из-за жесткого CORS браузер блокирует анализ данных потока. 
+        // Добавляем красивую живую реакцию спектра на основе ритма и времени для онлайн-радио!
+        if (activeMode === 'radio') {
+          const t = performance.now() * 0.008;
+          for (let i = 0; i < freqData.length; i++) {
+            const wave = Math.sin(t * 3 + i * 0.3) * 45 + Math.cos(t * 1.5 - i * 0.2) * 35;
+            const boost = Math.abs(Math.sin(t * 6)) * 60;
+            freqData[i] = Math.min(255, Math.max(25, 80 + wave + boost + (Math.random() * 40)));
+          }
+          for (let i = 0; i < timeData.length; i++) {
+            timeData[i] = 128 + Math.floor(45 * Math.sin(t * 4 + i * 0.15));
+          }
+        }
       } else {
         // Плавное дыхание спектра в режиме ожидания
         const t = performance.now() * 0.0025;
